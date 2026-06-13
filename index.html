@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>AeroVoice</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        
+        /* スクロールバーのカスタマイズ */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        /* アニメーション */
+        .fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .slide-down { animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideDown { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(100%); } }
+        
+        /* チャットバブル */
+        .chat-bubble-me { background: #e0e7ff; color: #3730a3; border-radius: 1.2rem 1.2rem 0 1.2rem; align-self: flex-end; }
+        .chat-bubble-other { background: #ffffff; color: #334155; border-radius: 1.2rem 1.2rem 1.2rem 0; align-self: flex-start; border: 1px solid #e2e8f0; }
+        
+        /* ローダー */
+        .loader { border: 2px solid transparent; border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* 波紋アニメーション */
+        .ripple { animation: rippleEffect 2s infinite; }
+        @keyframes rippleEffect {
+            0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.3); }
+            70% { box-shadow: 0 0 0 15px rgba(99, 102, 241, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+        }
+
+        /* ビデオ通話グリッドレイアウト */
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            width: 100%;
+            align-content: center;
+        }
+        .video-container {
+            position: relative;
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            border-radius: 1.5rem;
+            overflow: hidden;
+            aspect-ratio: 4/3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            backdrop-filter: blur(8px);
+        }
+        .video-element {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* 鏡面反転 */
+            background-color: #f1f5f9;
+        }
+        .avatar-element {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #fff;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .name-badge {
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 4px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 800;
+            color: #475569;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body class="h-[100dvh] w-screen overflow-hidden bg-gradient-to-br from-slate-100 via-indigo-50/50 to-blue-100/50">
+
+    <div class="w-full h-full bg-white/70 backdrop-blur-2xl flex flex-col overflow-hidden relative">
+        
+        <header class="pt-6 pb-4 px-6 bg-gradient-to-b from-white/90 to-white/0 flex justify-between items-start shrink-0 z-10">
+            <div>
+                <h1 class="text-2xl font-black text-slate-800 tracking-tight leading-none mb-1">AeroVoice<span class="text-indigo-600">.js</span></h1>
+                <p class="text-xs font-bold text-slate-400 tracking-wider">SECURE P2P MEETING</p>
+            </div>
+            <div id="status-indicator" class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-sm border text-slate-500 bg-slate-100/50 border-slate-200/50">
+                <div class="loader inline-block !border-t-slate-500 !border-slate-300"></div> <span class="ml-1">接続中</span>
+            </div>
+        </header>
+
+        <div id="main-tabs" class="flex shrink-0 bg-white/40 border-b border-indigo-100/50 backdrop-blur-md relative z-10">
+            <button onclick="switchTab('device')" id="tab-btn-device" class="flex-1 py-3.5 text-sm font-extrabold text-indigo-600 border-b-2 border-indigo-600 transition-all">マイデバイス</button>
+            <button onclick="switchTab('connect')" id="tab-btn-connect" class="flex-1 py-3.5 text-sm font-extrabold text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-all">接続</button>
+            <button onclick="switchTab('history')" id="tab-btn-history" class="flex-1 py-3.5 text-sm font-extrabold text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-all">履歴</button>
+        </div>
+
+        <div class="flex-1 overflow-hidden relative z-0 flex justify-center">
+            
+            <div class="w-full max-w-5xl h-full relative flex flex-col min-h-0">
+                
+                <div id="tab-device" class="flex-1 min-h-0 flex flex-col p-4 sm:p-6 fade-in overflow-y-auto">
+                    <div class="flex-1 flex flex-col md:flex-row items-center justify-center gap-8 md:gap-12">
+                        
+                        <div class="flex flex-col items-center gap-6 w-full max-w-sm">
+                            
+                            <div class="relative group cursor-pointer" onclick="document.getElementById('avatar-upload').click()">
+                                <div class="absolute -inset-2 bg-gradient-to-r from-indigo-400 to-blue-400 rounded-full blur opacity-20 group-hover:opacity-50 transition duration-500"></div>
+                                <img id="my-avatar-preview" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>" class="relative w-24 h-24 rounded-full object-cover border-4 border-white shadow-md bg-slate-50 transition-transform transform group-hover:scale-105">
+                                <div class="absolute inset-0 bg-slate-900/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                </div>
+                                <input type="file" id="avatar-upload" class="hidden" accept="image/*" onchange="openCropper(event)">
+                            </div>
+
+                            <div class="relative group cursor-pointer w-full text-center" onclick="copyMyId()">
+                                <span class="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-2 block">YOUR DEVICE ID</span>
+                                <div class="relative bg-white/80 px-8 py-4 rounded-2xl border border-indigo-50 shadow-sm inline-block">
+                                    <h2 id="my-id-display" class="text-4xl font-black text-slate-700 tracking-widest font-mono">------</h2>
+                                </div>
+                                <p class="text-[10px] text-slate-400 mt-2 font-bold opacity-0 group-hover:opacity-100 transition-opacity">タップしてコピー</p>
+                            </div>
+
+                            <div class="w-full">
+                                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2 ml-1 text-center">DEVICE NAME</label>
+                                <input type="text" id="my-name-input" class="w-full bg-white/60 border border-slate-200 text-slate-700 text-sm font-bold rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 shadow-inner transition-all text-center" placeholder="デバイス名を入力">
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center shrink-0">
+                            <div id="qrcode" class="p-2 bg-white rounded-xl"></div>
+                            <p class="text-[10px] font-bold text-slate-400 mt-3 text-center">相手のカメラでスキャンして<br>即座にグループ通話</p>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div id="tab-connect" class="flex-1 min-h-0 hidden flex-col p-4 sm:p-6 fade-in max-w-4xl mx-auto w-full">
+                    
+                    <div id="connect-setup-view" class="flex flex-col h-full space-y-6 w-full max-w-2xl mx-auto">
+                        <div class="p-5 bg-white/60 rounded-2xl border border-white shadow-sm transition-all duration-300 shrink-0">
+                            <label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider">Join or Call Device</label>
+                            
+                            <div id="reader" class="hidden w-full rounded-xl overflow-hidden mb-3 border-2 border-indigo-200/50 shadow-inner bg-black"></div>
+                            
+                            <div class="flex gap-2">
+                                <input type="text" id="target-id-input" placeholder="相手のID (6桁)" class="flex-1 px-4 py-3 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-mono font-bold uppercase shadow-inner transition-all" maxlength="6">
+                                
+                                <button id="scan-qr-btn" class="bg-slate-700 hover:bg-slate-800 text-white px-4 py-3 rounded-xl shadow-md transition-all flex items-center justify-center active:scale-95 shrink-0" title="QRをスキャン">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                </button>
+                                
+                                <button id="connect-btn" class="bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white px-5 py-3 rounded-xl text-sm font-bold shadow-lg shadow-indigo-200 transition-all transform hover:scale-[1.02] active:scale-95 shrink-0 flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                                    発信
+                                </button>
+                            </div>
+                            <p id="connection-status" class="text-xs mt-2 text-slate-500 font-medium h-4"></p>
+                        </div>
+
+                        <div class="flex-1 flex flex-col min-h-0 bg-white/40 rounded-2xl p-4 border border-white shadow-inner">
+                            <h3 class="text-xs font-bold text-slate-500 mb-3 uppercase tracking-wider flex items-center gap-2 shrink-0">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                最近のデバイス
+                            </h3>
+                            <ul id="nearby-list" class="flex-1 overflow-y-auto space-y-2 pr-1"></ul>
+                        </div>
+                    </div>
+
+                    <div id="connect-active-view" class="hidden flex-col md:flex-row flex-1 min-h-0 bg-white/60 rounded-[2rem] border border-white shadow-xl overflow-hidden relative w-full">
+                        
+                        <div class="flex-1 flex flex-col min-w-0 relative bg-slate-50/50">
+                            
+                            <div class="bg-white/80 backdrop-blur-md p-4 flex justify-between items-center border-b border-slate-200/50 z-10 shadow-sm shrink-0">
+                                <div class="flex items-center gap-3">
+                                    <div id="call-avatar" class="w-10 h-10 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-500 border border-indigo-100 shadow-inner ripple">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                                    </div>
+                                    <div class="overflow-hidden">
+                                        <p class="text-sm font-extrabold text-slate-700 truncate">グループ通話</p>
+                                        <p id="call-timer" class="text-[11px] text-emerald-500 font-bold flex items-center gap-1 font-mono">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> 00:00
+                                        </p>
+                                    </div>
+                                </div>
+                                <button id="disconnect-btn" class="px-4 py-2 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-xl text-xs font-bold transition-colors shrink-0 flex items-center gap-1 border border-red-100">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.516l2.257-1.13a1 1 0 00.502-1.21L9.22 3.683A1 1 0 008.27 3H5z"></path></svg>
+                                    退出
+                                </button>
+                            </div>
+
+                            <div class="flex-1 overflow-y-auto p-4 flex flex-col">
+                                <div class="video-grid" id="video-grid-container">
+                                    <div class="video-container" id="container-local">
+                                        <video id="video-local" class="video-element" autoplay muted playsinline></video>
+                                        <img id="avatar-local" class="avatar-element hidden" src="">
+                                        <div class="name-badge" id="name-local">あなた</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white/80 backdrop-blur-md p-4 border-t border-slate-200/50 flex justify-center gap-4 shrink-0 pb-safe">
+                                <button id="mute-btn" class="w-12 h-12 bg-slate-100 text-slate-600 rounded-full hover:bg-slate-200 transition-colors shadow-sm flex items-center justify-center border border-slate-200">
+                                    <svg id="icon-mic-on" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                                    <svg id="icon-mic-off" class="w-5 h-5 hidden text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14a3 3 0 003-3V5a3 3 0 00-3-3m-3 9v2m0 0v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5m-3 9a7 7 0 0014 0M3 3l18 18"></path></svg>
+                                </button>
+                                <button id="video-btn" class="w-12 h-12 bg-slate-100 text-slate-600 rounded-full hover:bg-slate-200 transition-colors shadow-sm flex items-center justify-center border border-slate-200">
+                                    <svg id="icon-vid-on" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    <svg id="icon-vid-off" class="w-5 h-5 hidden text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path><line x1="3" y1="3" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line></svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="w-full md:w-80 bg-white/70 border-t md:border-t-0 md:border-l border-white shrink-0 flex flex-col min-h-[40%] md:min-h-0">
+                            <div class="p-4 border-b border-white shrink-0 bg-white/50 hidden md:block">
+                                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"></path></svg>
+                                    グループチャット
+                                </h3>
+                            </div>
+                            <div id="chat-messages" class="flex-1 p-4 overflow-y-auto flex flex-col gap-3 min-h-0"></div>
+                            <div class="p-3 bg-white/60 border-t border-white shrink-0">
+                                <div class="flex gap-2 w-full">
+                                    <input type="text" id="chat-input" placeholder="メッセージ..." class="flex-1 bg-white px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 border border-slate-100 transition-all min-w-0 shadow-inner">
+                                    <button id="chat-send-btn" class="px-4 py-2.5 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 transition-colors shadow-sm shrink-0">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-history" class="flex-1 min-h-0 hidden flex-col p-4 sm:p-6 fade-in max-w-4xl mx-auto w-full">
+                    <div class="flex justify-between items-end mb-4 px-1 shrink-0">
+                        <div>
+                            <h2 class="text-lg font-extrabold text-slate-800 tracking-tight">通話履歴</h2>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Call History</p>
+                        </div>
+                        <button id="clear-history-btn" class="text-[10px] font-bold text-red-400 hover:text-red-600 px-3 py-1.5 bg-red-50 rounded-lg transition-colors border border-red-100">クリア</button>
+                    </div>
+                    
+                    <div class="flex-1 overflow-y-auto bg-white/60 rounded-2xl border border-white shadow-sm relative min-h-0">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <tbody id="history-body" class="divide-y divide-slate-100/50"></tbody>
+                        </table>
+                        
+                        <div id="no-history" class="flex flex-col items-center justify-center h-40 text-slate-400 hidden">
+                            <svg class="w-10 h-10 mb-2 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <span class="text-sm font-bold">履歴はありません</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div id="crop-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex-col items-center justify-center z-50 p-4 fade-in">
+        <div class="bg-white/90 backdrop-blur-md rounded-[2rem] shadow-2xl p-6 w-full max-w-sm border border-white flex flex-col">
+            <h3 class="text-lg font-extrabold mb-4 text-slate-800 tracking-tight text-center">アイコンを切り抜く</h3>
+            <div class="w-full h-64 bg-slate-100 rounded-2xl overflow-hidden mb-6 relative shadow-inner">
+                <img id="crop-image" src="" class="max-w-full block">
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closeCropper()" class="flex-1 px-4 py-3 bg-slate-100 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-200 transition-all">キャンセル</button>
+                <button onclick="saveCroppedImage()" class="flex-1 px-4 py-3 bg-indigo-500 text-white rounded-xl text-sm font-bold hover:bg-indigo-600 transition-all shadow-lg shadow-indigo-200">設定する</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="auth-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex-col items-center justify-center z-50 p-4 fade-in">
+        <div class="bg-white/90 backdrop-blur-md rounded-[2rem] shadow-2xl p-8 max-w-sm w-full border border-white">
+            <div class="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center mb-4 border border-indigo-100 shadow-inner ripple">
+                <svg class="w-6 h-6 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+            </div>
+            <h3 class="text-xl font-extrabold mb-2 text-slate-800 tracking-tight">着信中...</h3>
+            <p class="text-sm text-slate-500 mb-8 font-medium leading-relaxed">
+                <span id="auth-peer-name" class="font-black text-indigo-600 text-base px-1">---</span> <br>から音声/ビデオ通話の着信です。応答しますか？
+            </p>
+            <div class="flex gap-3">
+                <button id="auth-reject-btn" class="flex-1 px-4 py-3 bg-red-50 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 transition-all border border-red-100">拒否</button>
+                <button id="auth-accept-btn" class="flex-1 px-4 py-3 bg-emerald-500 text-white rounded-xl text-sm font-bold hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200 transform hover:scale-[1.02] active:scale-95 flex justify-center items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> 応答
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirm-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex-col items-center justify-center z-50 p-4 fade-in">
+        <div class="bg-white/90 backdrop-blur-md rounded-[2rem] shadow-2xl p-8 max-w-sm w-full border border-white">
+            <h3 class="text-lg font-extrabold mb-2 text-slate-800 tracking-tight" id="confirm-title">確認</h3>
+            <p class="text-sm text-slate-500 mb-8 font-medium leading-relaxed" id="confirm-desc"></p>
+            <div class="flex gap-3">
+                <button id="confirm-cancel-btn" class="flex-1 px-4 py-3 bg-slate-100 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-200 transition-all">キャンセル</button>
+                <button id="confirm-ok-btn" class="flex-1 px-4 py-3 bg-indigo-500 text-white rounded-xl text-sm font-bold hover:bg-indigo-600 transition-all shadow-lg shadow-indigo-200">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-full max-w-xs px-4"></div>
+
+    <script>
+        // --- 設定と初期化 ---
+        let peer;
+        
+        // 複数人通話対応のMapに変更
+        const activeConnections = new Map();
+        const activeCalls = new Map();
+        const peerInfos = new Map(); // id -> {name, avatar, video, audio}
+        
+        let pendingConnection = null;
+        let localStream = null;
+        let callTimerInterval = null;
+        let callSeconds = 0;
+        
+        let isMuted = false;
+        let isVideoOff = false;
+        
+        const myId = getOrCreateId();
+        let myName = localStorage.getItem('voice_myPeerName') || '名無しデバイス';
+        let myAvatarData = localStorage.getItem('voice_myAvatar') || ''; 
+        let knownPeers = JSON.parse(localStorage.getItem('voice_knownPeers') || '{}');
+        let historyData = JSON.parse(localStorage.getItem('voice_callHistory') || '[]');
+        
+        let html5QrCode = null;
+        let cropper = null;
+
+        // DOM要素の取得
+        const ui = {
+            idDisplay: document.getElementById('my-id-display'),
+            statusIndicator: document.getElementById('status-indicator'),
+            targetInput: document.getElementById('target-id-input'),
+            connectBtn: document.getElementById('connect-btn'),
+            connStatus: document.getElementById('connection-status'),
+            historyBody: document.getElementById('history-body'),
+            noHistory: document.getElementById('no-history'),
+            clearHistoryBtn: document.getElementById('clear-history-btn'),
+            qrcode: document.getElementById('qrcode'),
+            nameInput: document.getElementById('my-name-input'),
+            nearbyList: document.getElementById('nearby-list'),
+            
+            avatarPreview: document.getElementById('my-avatar-preview'),
+            cropModal: document.getElementById('crop-modal'),
+            cropImage: document.getElementById('crop-image'),
+            
+            setupView: document.getElementById('connect-setup-view'),
+            activeView: document.getElementById('connect-active-view'),
+            
+            videoGrid: document.getElementById('video-grid-container'),
+            videoLocal: document.getElementById('video-local'),
+            avatarLocal: document.getElementById('avatar-local'),
+            nameLocal: document.getElementById('name-local'),
+            
+            callTimer: document.getElementById('call-timer'),
+            callAvatar: document.getElementById('call-avatar'),
+            disconnectBtn: document.getElementById('disconnect-btn'),
+            chatMessages: document.getElementById('chat-messages'),
+            chatInput: document.getElementById('chat-input'),
+            chatSendBtn: document.getElementById('chat-send-btn'),
+            
+            muteBtn: document.getElementById('mute-btn'),
+            videoBtn: document.getElementById('video-btn'),
+            iconMicOn: document.getElementById('icon-mic-on'),
+            iconMicOff: document.getElementById('icon-mic-off'),
+            iconVidOn: document.getElementById('icon-vid-on'),
+            iconVidOff: document.getElementById('icon-vid-off'),
+
+            authModal: document.getElementById('auth-modal'),
+            authPeerName: document.getElementById('auth-peer-name'),
+            authAcceptBtn: document.getElementById('auth-accept-btn'),
+            authRejectBtn: document.getElementById('auth-reject-btn'),
+
+            confirmModal: document.getElementById('confirm-modal'),
+            confirmTitle: document.getElementById('confirm-title'),
+            confirmDesc: document.getElementById('confirm-desc'),
+            confirmOkBtn: document.getElementById('confirm-ok-btn'),
+            confirmCancelBtn: document.getElementById('confirm-cancel-btn'),
+            toastContainer: document.getElementById('toast-container'),
+            mainTabs: document.getElementById('main-tabs')
+        };
+
+        initApp();
+
+        function initApp() {
+            ui.idDisplay.textContent = myId;
+            ui.nameInput.value = myName;
+            ui.nameLocal.textContent = myName;
+            if(myAvatarData) {
+                ui.avatarPreview.src = myAvatarData;
+                ui.avatarLocal.src = myAvatarData;
+            }
+            
+            ui.nameInput.addEventListener('input', (e) => {
+                myName = e.target.value.trim() || '名無しデバイス';
+                localStorage.setItem('voice_myPeerName', myName);
+                ui.nameLocal.textContent = myName;
+                broadcastMetadata();
+            });
+
+            renderHistory();
+            renderNearby();
+            generateQR();
+
+            peer = new Peer(myId, { debug: 2 });
+
+            peer.on('open', (id) => {
+                setStatus('オンライン', 'text-emerald-600 bg-emerald-100/50 border-emerald-200/50', false);
+                checkUrlForAutoConnect();
+            });
+
+            // データ接続受信
+            peer.on('connection', (conn) => {
+                setupConnection(conn, false);
+            });
+
+            // メディア接続受信
+            peer.on('call', (call) => {
+                if(localStream) {
+                    call.answer(localStream);
+                    handleCallStream(call);
+                }
+            });
+
+            peer.on('error', (err) => {
+                console.error(err);
+                if(err.type === 'peer-unavailable') {
+                    ui.connStatus.textContent = '指定されたIDが見つかりません';
+                    ui.connStatus.className = "text-xs mt-2 text-red-500 font-bold h-4";
+                } else {
+                    setStatus('エラー', 'text-red-600 bg-red-100/50 border-red-200/50', false);
+                }
+            });
+
+            // イベントリスナー
+            ui.connectBtn.addEventListener('click', () => connectToPeer(ui.targetInput.value));
+            ui.clearHistoryBtn.addEventListener('click', () => {
+                customConfirm('確認', '通話履歴をすべて削除しますか？\n(最近のデバイスもリセットされます)', clearHistory);
+            });
+            ui.disconnectBtn.addEventListener('click', disconnectAll);
+            ui.chatSendBtn.addEventListener('click', sendChatMessage);
+            ui.chatInput.addEventListener('keypress', (e) => {
+                if(e.key === 'Enter') sendChatMessage();
+            });
+            ui.authAcceptBtn.addEventListener('click', acceptConnection);
+            ui.authRejectBtn.addEventListener('click', rejectConnection);
+            ui.muteBtn.addEventListener('click', toggleMute);
+            ui.videoBtn.addEventListener('click', toggleVideo);
+            document.getElementById('scan-qr-btn').addEventListener('click', toggleScanner);
+        }
+
+        // --- カスタムUI ---
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            const bgClasses = type === 'error' ? 'bg-red-500' : 'bg-slate-800';
+            toast.className = `${bgClasses} text-white px-4 py-3 rounded-xl shadow-lg text-sm font-bold flex items-center justify-center slide-up`;
+            toast.textContent = message;
+            ui.toastContainer.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.replace('slide-up', 'slide-down');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function customConfirm(title, description, onConfirm) {
+            ui.confirmTitle.textContent = title;
+            ui.confirmDesc.innerHTML = description.replace(/\n/g, '<br>');
+            ui.confirmModal.classList.remove('hidden');
+            ui.confirmModal.classList.add('flex');
+            const handleOk = () => { cleanup(); onConfirm(); };
+            const handleCancel = () => { cleanup(); };
+            const cleanup = () => {
+                ui.confirmModal.classList.add('hidden');
+                ui.confirmModal.classList.remove('flex');
+                ui.confirmOkBtn.removeEventListener('click', handleOk);
+                ui.confirmCancelBtn.removeEventListener('click', handleCancel);
+            };
+            ui.confirmOkBtn.addEventListener('click', handleOk);
+            ui.confirmCancelBtn.addEventListener('click', handleCancel);
+        }
+
+        function switchTab(tabId) {
+            const tabs = ['device', 'connect', 'history'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tab-btn-${t}`);
+                const content = document.getElementById(`tab-${t}`);
+                if (t === tabId) {
+                    btn.classList.add('text-indigo-600', 'border-indigo-600');
+                    btn.classList.remove('text-slate-400', 'border-transparent');
+                    content.classList.remove('hidden');
+                    content.classList.add('flex');
+                } else {
+                    btn.classList.remove('text-indigo-600', 'border-indigo-600');
+                    btn.classList.add('text-slate-400', 'border-transparent');
+                    content.classList.add('hidden');
+                    content.classList.remove('flex');
+                }
+            });
+        }
+
+        function setStatus(text, containerClasses, showLoader = false) {
+            let iconHtml = showLoader 
+                ? `<div class="loader inline-block !border-t-current !border-current/30"></div>`
+                : (text === 'オンライン' 
+                    ? `<span class="relative flex h-2.5 w-2.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span></span>`
+                    : `<span class="h-2.5 w-2.5 rounded-full bg-current"></span>`);
+            
+            ui.statusIndicator.innerHTML = `${iconHtml} <span class="ml-1">${text}</span>`;
+            ui.statusIndicator.className = `flex items-center px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-sm border transition-all ${containerClasses}`;
+        }
+
+        // --- 画像クロップ ---
+        function openCropper(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                ui.cropImage.src = event.target.result;
+                ui.cropModal.classList.remove('hidden');
+                ui.cropModal.classList.add('flex');
+                if (cropper) cropper.destroy();
+                cropper = new Cropper(ui.cropImage, {
+                    aspectRatio: 1, viewMode: 1, dragMode: 'move', autoCropArea: 1,
+                    cropBoxMovable: false, cropBoxResizable: false, guides: false,
+                });
+            };
+            reader.readAsDataURL(file);
+            e.target.value = ''; 
+        }
+
+        function closeCropper() {
+            ui.cropModal.classList.add('hidden');
+            ui.cropModal.classList.remove('flex');
+            if (cropper) { cropper.destroy(); cropper = null; }
+        }
+
+        function saveCroppedImage() {
+            if (!cropper) return;
+            const canvas = cropper.getCroppedCanvas({ width: 256, height: 256 });
+            myAvatarData = canvas.toDataURL('image/jpeg', 0.8);
+            localStorage.setItem('voice_myAvatar', myAvatarData);
+            ui.avatarPreview.src = myAvatarData;
+            ui.avatarLocal.src = myAvatarData;
+            
+            broadcastMetadata();
+            closeCropper();
+        }
+
+        // --- マイク・カメラ取得 ---
+        async function getMedia() {
+            if (localStream) return true;
+            try {
+                // ビデオも取得するように変更
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+                ui.videoLocal.srcObject = localStream;
+                updateLocalMediaUI();
+                return true;
+            } catch (err) {
+                console.error(err);
+                try {
+                    // ビデオがない場合は音声のみフォールバック
+                    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                    isVideoOff = true;
+                    updateLocalMediaUI();
+                    return true;
+                } catch(e) {
+                    showToast('マイク/カメラのアクセスが許可されていません', 'error');
+                    ui.connStatus.textContent = 'メディア取得エラー';
+                    ui.connStatus.className = "text-xs mt-2 text-red-500 font-bold h-4";
+                    return false;
+                }
+            }
+        }
+
+        function toggleMute() {
+            if(!localStream) return;
+            isMuted = !isMuted;
+            localStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
+            
+            if(isMuted) {
+                ui.iconMicOn.classList.add('hidden');
+                ui.iconMicOff.classList.remove('hidden');
+                ui.muteBtn.classList.replace('bg-slate-100', 'bg-red-50');
+                ui.muteBtn.classList.replace('border-slate-200', 'border-red-200');
+            } else {
+                ui.iconMicOn.classList.remove('hidden');
+                ui.iconMicOff.classList.add('hidden');
+                ui.muteBtn.classList.replace('bg-red-50', 'bg-slate-100');
+                ui.muteBtn.classList.replace('border-red-200', 'border-slate-200');
+            }
+        }
+
+        function toggleVideo() {
+            if(!localStream) return;
+            isVideoOff = !isVideoOff;
+            
+            const vTracks = localStream.getVideoTracks();
+            if(vTracks.length > 0) {
+                vTracks.forEach(t => t.enabled = !isVideoOff);
+            }
+
+            if(isVideoOff) {
+                ui.iconVidOn.classList.add('hidden');
+                ui.iconVidOff.classList.remove('hidden');
+                ui.videoBtn.classList.replace('bg-slate-100', 'bg-red-50');
+                ui.videoBtn.classList.replace('border-slate-200', 'border-red-200');
+            } else {
+                ui.iconVidOn.classList.remove('hidden');
+                ui.iconVidOff.classList.add('hidden');
+                ui.videoBtn.classList.replace('bg-red-50', 'bg-slate-100');
+                ui.videoBtn.classList.replace('border-red-200', 'border-slate-200');
+            }
+            updateLocalMediaUI();
+            broadcastMetadata();
+        }
+
+        function updateLocalMediaUI() {
+            if (isVideoOff || localStream.getVideoTracks().length === 0) {
+                ui.videoLocal.classList.add('hidden');
+                ui.avatarLocal.classList.remove('hidden');
+                ui.avatarLocal.src = myAvatarData || ui.avatarPreview.src;
+            } else {
+                ui.videoLocal.classList.remove('hidden');
+                ui.avatarLocal.classList.add('hidden');
+            }
+        }
+
+        // --- 接続・通信ロジック (複数人) ---
+        function getOrCreateId() {
+            let id = localStorage.getItem('voice_myPeerId');
+            if (!id) {
+                id = Math.random().toString(36).substring(2, 8).toUpperCase();
+                localStorage.setItem('voice_myPeerId', id);
+            }
+            return id;
+        }
+
+        function copyMyId() {
+            navigator.clipboard.writeText(myId).then(() => showToast('IDをコピーしたで！'));
+        }
+
+        function generateQR() {
+            ui.qrcode.innerHTML = ''; 
+            new QRCode(ui.qrcode, {
+                text: myId, width: 140, height: 140, colorDark : "#334155", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.M
+            });
+        }
+
+        function checkUrlForAutoConnect() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetPeerId = urlParams.get('peer');
+            if (targetPeerId && targetPeerId !== myId) {
+                ui.targetInput.value = targetPeerId;
+                switchTab('connect');
+                connectToPeer(targetPeerId);
+            }
+        }
+
+        async function connectToPeer(targetId) {
+            targetId = targetId.trim().toUpperCase();
+            if (!targetId || targetId === myId || activeConnections.has(targetId)) return;
+
+            ui.connStatus.textContent = 'メディア準備中...';
+            ui.connStatus.className = "text-xs mt-2 text-indigo-500 font-bold h-4";
+
+            const hasMedia = await getMedia();
+            if(!hasMedia) return;
+
+            ui.connStatus.textContent = '呼び出し中...';
+            const conn = peer.connect(targetId, { reliable: true });
+            setupConnection(conn, true);
+        }
+
+        function setupConnection(conn, isInitiator) {
+            conn.on('open', () => {
+                if (isInitiator) {
+                    ui.connStatus.textContent = '相手の応答を待機中...';
+                    ui.connStatus.className = "text-xs mt-2 text-orange-500 font-bold h-4";
+                    conn.send({ type: 'req-connect', name: myName });
+                }
+            });
+
+            conn.on('data', (data) => {
+                if (data.type === 'req-connect') {
+                    // もしすでに通話中なら自動応答、そうでなければ確認モーダル
+                    if (activeConnections.size > 0) {
+                        autoAcceptConnection(conn, data.name);
+                    } else {
+                        pendingConnection = conn;
+                        ui.authPeerName.textContent = data.name || conn.peer;
+                        ui.authModal.classList.remove('hidden');
+                        ui.authModal.classList.add('flex');
+                        showToast(`${data.name || conn.peer}から着信です`);
+                    }
+                } 
+                else if (data.type === 'res-connect') {
+                    if (data.status === 'accepted') {
+                        activeConnections.set(conn.peer, conn);
+                        updateKnownPeers(conn.peer, data.name);
+                        
+                        const call = peer.call(conn.peer, localStream);
+                        handleCallStream(call);
+
+                        toggleConnectionView(true);
+                        conn.send({ type: 'metadata', name: myName, avatar: myAvatarData, video: !isVideoOff });
+                        broadcastPeerList(); // メッシュネットワーク展開
+                        ui.connStatus.textContent = '';
+                    } else {
+                        ui.connStatus.textContent = '相手に通話を拒否されました';
+                        ui.connStatus.className = "text-xs mt-2 text-red-500 font-bold h-4";
+                        conn.close();
+                    }
+                }
+                else if (data.type === 'metadata') {
+                    peerInfos.set(conn.peer, { name: data.name, avatar: data.avatar, video: data.video });
+                    updateKnownPeers(conn.peer, data.name);
+                    updateGridUI(conn.peer);
+                } 
+                else if (data.type === 'chat') {
+                    const sender = peerInfos.get(conn.peer)?.name || conn.peer;
+                    appendChatMessage(data.text, sender, 'other');
+                }
+                else if (data.type === 'peer-list') {
+                    // 自動メッシュ構築
+                    data.peers.forEach(p => {
+                        if (p !== myId && !activeConnections.has(p)) {
+                            connectToPeer(p);
+                        }
+                    });
+                }
+            });
+
+            conn.on('close', () => {
+                handlePeerDisconnect(conn.peer);
+                if (pendingConnection === conn) {
+                    pendingConnection = null;
+                    closeAuthModal();
+                }
+            });
+        }
+
+        async function autoAcceptConnection(conn, peerName) {
+            const hasMedia = await getMedia();
+            if(!hasMedia) { conn.close(); return; }
+            
+            conn.send({ type: 'res-connect', status: 'accepted', name: myName });
+            activeConnections.set(conn.peer, conn);
+            updateKnownPeers(conn.peer, peerName);
+            
+            conn.send({ type: 'metadata', name: myName, avatar: myAvatarData, video: !isVideoOff });
+            broadcastPeerList();
+        }
+
+        async function acceptConnection() {
+            if (pendingConnection) {
+                const hasMedia = await getMedia();
+                if(!hasMedia) { rejectConnection(); return; }
+
+                pendingConnection.send({ type: 'res-connect', status: 'accepted', name: myName });
+                activeConnections.set(pendingConnection.peer, pendingConnection);
+                
+                const pName = ui.authPeerName.textContent;
+                updateKnownPeers(pendingConnection.peer, pName);
+                toggleConnectionView(true);
+                
+                pendingConnection.send({ type: 'metadata', name: myName, avatar: myAvatarData, video: !isVideoOff });
+                closeAuthModal();
+            }
+        }
+
+        function rejectConnection() {
+            if (pendingConnection) {
+                pendingConnection.send({ type: 'res-connect', status: 'rejected' });
+                setTimeout(() => pendingConnection.close(), 500); 
+                closeAuthModal();
+            }
+        }
+
+        function closeAuthModal() {
+            ui.authModal.classList.add('hidden');
+            ui.authModal.classList.remove('flex');
+            pendingConnection = null;
+        }
+
+        function handleCallStream(call) {
+            activeCalls.set(call.peer, call);
+            call.on('stream', (remoteStream) => {
+                addVideoStream(call.peer, remoteStream);
+            });
+            call.on('close', () => {
+                handlePeerDisconnect(call.peer);
+            });
+        }
+
+        function handlePeerDisconnect(peerId) {
+            if(activeConnections.has(peerId)) {
+                saveHistory('通話', formatDuration(callSeconds), peerId);
+            }
+            activeConnections.delete(peerId);
+            activeCalls.delete(peerId);
+            peerInfos.delete(peerId);
+            removeVideoStream(peerId);
+            
+            if(activeConnections.size === 0) {
+                disconnectAll();
+            } else {
+                showToast(`${knownPeers[peerId] || peerId} が退出しました`);
+            }
+        }
+
+        function disconnectAll() {
+            activeConnections.forEach(conn => conn.close());
+            activeCalls.forEach(call => call.close());
+            activeConnections.clear();
+            activeCalls.clear();
+            peerInfos.clear();
+            
+            document.querySelectorAll('.video-container').forEach(c => {
+                if(c.id !== 'container-local') c.remove();
+            });
+            
+            toggleConnectionView(false);
+            ui.connStatus.textContent = '通話を終了しました';
+            ui.connStatus.className = "text-xs mt-2 text-slate-500 font-bold h-4";
+        }
+
+        function broadcastMetadata() {
+            const data = { type: 'metadata', name: myName, avatar: myAvatarData, video: !isVideoOff };
+            activeConnections.forEach(conn => {
+                if(conn.open) conn.send(data);
+            });
+        }
+
+        function broadcastPeerList() {
+            const peers = Array.from(activeConnections.keys());
+            if(peers.length > 0) {
+                activeConnections.forEach(conn => {
+                    if(conn.open) conn.send({ type: 'peer-list', peers: peers });
+                });
+            }
+        }
+
+        // --- ビデオグリッド UI ---
+        function addVideoStream(peerId, stream) {
+            if (document.getElementById(`container-${peerId}`)) return;
+            
+            const container = document.createElement('div');
+            container.id = `container-${peerId}`;
+            container.className = 'video-container fade-in';
+            container.innerHTML = `
+                <video id="video-${peerId}" class="video-element" autoplay playsinline></video>
+                <img id="avatar-${peerId}" class="avatar-element hidden" src="">
+                <div class="name-badge" id="name-${peerId}">${peerId}</div>
+            `;
+            ui.videoGrid.appendChild(container);
+            document.getElementById(`video-${peerId}`).srcObject = stream;
+            
+            // 初期のメタデータ適用
+            updateGridUI(peerId);
+        }
+
+        function removeVideoStream(peerId) {
+            const el = document.getElementById(`container-${peerId}`);
+            if(el) el.remove();
+        }
+
+        function updateGridUI(peerId) {
+            const info = peerInfos.get(peerId);
+            if (!info) return;
+            
+            const nameEl = document.getElementById(`name-${peerId}`);
+            const vidEl = document.getElementById(`video-${peerId}`);
+            const avEl = document.getElementById(`avatar-${peerId}`);
+            
+            if (nameEl) nameEl.textContent = info.name || peerId;
+            if (vidEl && avEl) {
+                if (info.video) {
+                    vidEl.classList.remove('hidden');
+                    avEl.classList.add('hidden');
+                } else {
+                    vidEl.classList.add('hidden');
+                    avEl.classList.remove('hidden');
+                    avEl.src = info.avatar || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
+                }
+            }
+        }
+
+        function toggleConnectionView(isConnected) {
+            if (isConnected && activeConnections.size === 1) { // 最初の接続時のみ
+                ui.setupView.classList.add('hidden');
+                ui.mainTabs.classList.add('hidden');
+                ui.activeView.classList.remove('hidden');
+                ui.activeView.classList.add('flex');
+                
+                ui.chatMessages.innerHTML = '';
+                const defaultMsg = document.createElement('p');
+                defaultMsg.className = "text-[10px] uppercase tracking-widest text-center text-slate-400 py-4 font-bold";
+                defaultMsg.textContent = "セキュアなP2Pグループ通話が確立されました";
+                ui.chatMessages.appendChild(defaultMsg);
+                
+                startCallTimer();
+            } else if (!isConnected) {
+                stopCallTimer();
+                ui.setupView.classList.remove('hidden');
+                ui.mainTabs.classList.remove('hidden');
+                ui.activeView.classList.add('hidden');
+                ui.activeView.classList.remove('flex');
+            }
+        }
+
+        function startCallTimer() {
+            clearInterval(callTimerInterval);
+            callSeconds = 0;
+            ui.callTimer.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> 00:00`;
+            ui.callAvatar.classList.add('ripple');
+            
+            callTimerInterval = setInterval(() => {
+                callSeconds++;
+                ui.callTimer.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> ${formatDuration(callSeconds)}`;
+            }, 1000);
+        }
+
+        function stopCallTimer() {
+            clearInterval(callTimerInterval);
+            ui.callAvatar.classList.remove('ripple');
+            ui.callTimer.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> 通話終了`;
+        }
+
+        function formatDuration(seconds) {
+            const m = String(Math.floor(seconds / 60)).padStart(2, '0');
+            const s = String(seconds % 60).padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        // --- チャット・履歴・その他 ---
+        function sendChatMessage() {
+            const text = ui.chatInput.value.trim();
+            if (!text || activeConnections.size === 0) return;
+
+            activeConnections.forEach(conn => {
+                if(conn.open) conn.send({ type: 'chat', text: text });
+            });
+            appendChatMessage(text, 'あなた', 'me');
+            ui.chatInput.value = '';
+        }
+
+        function appendChatMessage(text, sender, type) {
+            const div = document.createElement('div');
+            const isMe = type === 'me';
+            div.className = "fade-in flex flex-col " + (isMe ? "items-end" : "items-start");
+            div.innerHTML = `
+                <span class="text-[10px] text-slate-400 mb-1 mx-1 font-bold">${sender}</span>
+                <div class="${isMe ? 'chat-bubble-me' : 'chat-bubble-other'} p-3 px-4 text-sm font-medium break-words max-w-[90%] shadow-sm">${text}</div>
+            `;
+            ui.chatMessages.appendChild(div);
+            ui.chatMessages.scrollTop = ui.chatMessages.scrollHeight;
+        }
+
+        function updateKnownPeers(id, name) {
+            knownPeers[id] = name;
+            localStorage.setItem('voice_knownPeers', JSON.stringify(knownPeers));
+            renderNearby();
+        }
+
+        function renderNearby() {
+            ui.nearbyList.innerHTML = '';
+            const peers = Object.keys(knownPeers);
+            if (peers.length === 0) {
+                ui.nearbyList.innerHTML = '<li class="text-xs text-slate-400 text-center py-6 font-bold">まだ見つかりません</li>';
+                return;
+            }
+            peers.forEach(id => {
+                if (id === myId) return;
+                const li = document.createElement('li');
+                li.className = "flex justify-between items-center bg-white/50 p-3 rounded-xl border border-white hover:bg-white hover:shadow-sm cursor-pointer transition-all";
+                li.innerHTML = `
+                    <div class="overflow-hidden">
+                        <p class="text-sm font-bold text-slate-700 truncate">${knownPeers[id]}</p>
+                        <p class="text-[10px] text-slate-400 font-mono font-bold">${id}</p>
+                    </div>
+                    <button class="text-xs bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg hover:bg-indigo-100 font-bold ml-2 shrink-0 transition-colors border border-indigo-100/50 flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                        発信
+                    </button>
+                `;
+                li.addEventListener('click', () => {
+                    ui.targetInput.value = id;
+                    connectToPeer(id);
+                    switchTab('connect'); 
+                });
+                ui.nearbyList.appendChild(li);
+            });
+        }
+
+        function saveHistory(type, duration, peerId) {
+            if (callSeconds === 0) return;
+            const entry = { type, duration, peerId: knownPeers[peerId] || peerId, date: new Date().toLocaleString() };
+            historyData.unshift(entry);
+            if (historyData.length > 20) historyData.pop();
+            localStorage.setItem('voice_callHistory', JSON.stringify(historyData));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            ui.historyBody.innerHTML = '';
+            if (historyData.length === 0) {
+                ui.noHistory.classList.remove('hidden');
+                ui.historyBody.parentNode.classList.add('hidden');
+                return;
+            }
+            ui.noHistory.classList.add('hidden');
+            ui.historyBody.parentNode.classList.remove('hidden');
+            historyData.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/50 transition-colors";
+                tr.innerHTML = `
+                    <td class="px-4 py-3"><span class="px-2.5 py-1 rounded-lg border text-[10px] font-extrabold uppercase tracking-wider text-indigo-600 bg-indigo-50 border-indigo-100">${item.type}</span></td>
+                    <td class="px-4 py-3 font-bold text-slate-700 font-mono text-xs">⏱ ${item.duration}</td>
+                    <td class="px-4 py-3 text-slate-400 text-xs">
+                        <div class="font-bold text-slate-600">${item.peerId}</div>
+                        <div class="text-[9px] opacity-70">${item.date}</div>
+                    </td>
+                `;
+                ui.historyBody.appendChild(tr);
+            });
+        }
+
+        function clearHistory() {
+            historyData = [];
+            localStorage.removeItem('voice_callHistory');
+            knownPeers = {};
+            localStorage.removeItem('voice_knownPeers');
+            renderNearby();
+            renderHistory();
+            showToast('履歴をクリアしたで！');
+        }
+
+        function toggleScanner() {
+            const readerDiv = document.getElementById('reader');
+            if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+            
+            if (readerDiv.classList.contains('hidden')) {
+                readerDiv.classList.remove('hidden');
+                html5QrCode.start(
+                    { facingMode: "environment" },
+                    { fps: 10, qrbox: { width: 200, height: 200 } },
+                    (decodedText) => {
+                        html5QrCode.stop().then(() => {
+                            readerDiv.classList.add('hidden');
+                            ui.targetInput.value = decodedText;
+                            connectToPeer(decodedText);
+                        });
+                    },
+                    (error) => {}
+                ).catch((err) => {
+                    showToast('カメラの起動に失敗したンゴ', 'error');
+                    readerDiv.classList.add('hidden');
+                });
+            } else {
+                html5QrCode.stop().then(() => readerDiv.classList.add('hidden')).catch(err => console.log(err));
+            }
+        }
+    </script>
+</body>
+</html>
