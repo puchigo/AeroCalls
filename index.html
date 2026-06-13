@@ -14,12 +14,10 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
         
-        /* スクロールバーのカスタマイズ */
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         
-        /* アニメーション */
         .fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         .slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .slide-down { animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
@@ -28,15 +26,9 @@
         @keyframes slideUp { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: translateY(0); } }
         @keyframes slideDown { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(100%); } }
         
-        /* チャットバブル */
-        .chat-bubble-me { background: #e0e7ff; color: #3730a3; border-radius: 1.2rem 1.2rem 0 1.2rem; align-self: flex-end; }
-        .chat-bubble-other { background: #ffffff; color: #334155; border-radius: 1.2rem 1.2rem 1.2rem 0; align-self: flex-start; border: 1px solid #e2e8f0; }
-        
-        /* ローダー */
         .loader { border: 2px solid transparent; border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* 波紋アニメーション */
         .ripple { animation: rippleEffect 2s infinite; }
         @keyframes rippleEffect {
             0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.3); }
@@ -44,41 +36,55 @@
             100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
         }
 
-        /* ビデオ通話グリッドレイアウト */
+        /* ビデオグリッド */
         .video-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: 1fr;
             gap: 1rem;
             width: 100%;
+            height: 100%;
             align-content: center;
+            justify-items: center;
+        }
+        @media (min-width: 768px) {
+            .video-grid {
+                grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            }
         }
         .video-container {
             position: relative;
             background: rgba(255, 255, 255, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.8);
+            border: 4px solid rgba(255, 255, 255, 0.8);
             border-radius: 1.5rem;
             overflow: hidden;
-            aspect-ratio: 4/3;
+            aspect-ratio: 16/9;
             display: flex;
             align-items: center;
             justify-content: center;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
             backdrop-filter: blur(8px);
+            width: 100%;
+            max-width: 100%;
+            transition: all 0.15s ease;
+        }
+        @media (min-width: 768px) {
+            .video-container { aspect-ratio: 16/9; max-width: none; }
         }
         .video-element {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transform: scaleX(-1); /* 鏡面反転 */
+            transform: scaleX(-1);
             background-color: #f1f5f9;
         }
         .avatar-element {
-            width: 80px;
-            height: 80px;
+            width: 90px;
+            height: 90px;
             border-radius: 50%;
             object-fit: cover;
             border: 4px solid #fff;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            background-color: var(--avatar-bg, #f8fafc);
         }
         .name-badge {
             position: absolute;
@@ -92,6 +98,21 @@
             color: #475569;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             backdrop-filter: blur(4px);
+        }
+        
+        /* 発話時の緑色エフェクト */
+        .speaking-ring {
+            border-color: #10b981 !important;
+            box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.3) !important;
+        }
+
+        /* トグルスイッチのスタイル */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #4f46e5;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #4f46e5;
         }
     </style>
 </head>
@@ -115,22 +136,26 @@
             <button onclick="switchTab('history')" id="tab-btn-history" class="flex-1 py-3.5 text-sm font-extrabold text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-all">履歴</button>
         </div>
 
-        <div class="flex-1 overflow-hidden relative z-0 flex justify-center">
+        <div class="flex-1 overflow-hidden relative z-0 flex justify-center w-full">
             
-            <div class="w-full max-w-5xl h-full relative flex flex-col min-h-0">
+            <div class="w-full lg:w-[96%] xl:w-[98%] h-full relative flex flex-col min-h-0">
                 
                 <div id="tab-device" class="flex-1 min-h-0 flex flex-col p-4 sm:p-6 fade-in overflow-y-auto">
-                    <div class="flex-1 flex flex-col md:flex-row items-center justify-center gap-8 md:gap-12">
+                    <div class="flex-1 flex flex-col md:flex-row items-start justify-center gap-8 md:gap-12">
                         
-                        <div class="flex flex-col items-center gap-6 w-full max-w-sm">
-                            
+                        <div class="flex flex-col items-center gap-6 w-full max-w-sm mt-4">
                             <div class="relative group cursor-pointer" onclick="document.getElementById('avatar-upload').click()">
                                 <div class="absolute -inset-2 bg-gradient-to-r from-indigo-400 to-blue-400 rounded-full blur opacity-20 group-hover:opacity-50 transition duration-500"></div>
-                                <img id="my-avatar-preview" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>" class="relative w-24 h-24 rounded-full object-cover border-4 border-white shadow-md bg-slate-50 transition-transform transform group-hover:scale-105">
+                                <img id="my-avatar-preview" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>" class="relative w-24 h-24 rounded-full object-cover border-4 border-white shadow-md transition-transform transform group-hover:scale-105" style="background-color: #f8fafc;">
                                 <div class="absolute inset-0 bg-slate-900/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                                 </div>
                                 <input type="file" id="avatar-upload" class="hidden" accept="image/*" onchange="openCropper(event)">
+                            </div>
+
+                            <div class="w-full">
+                                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2 ml-1 text-center">DEVICE NAME</label>
+                                <input type="text" id="my-name-input" class="w-full bg-white/60 border border-slate-200 text-slate-700 text-sm font-bold rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 shadow-inner transition-all text-center" placeholder="デバイス名を入力">
                             </div>
 
                             <div class="relative group cursor-pointer w-full text-center" onclick="copyMyId()">
@@ -140,22 +165,30 @@
                                 </div>
                                 <p class="text-[10px] text-slate-400 mt-2 font-bold opacity-0 group-hover:opacity-100 transition-opacity">タップしてコピー</p>
                             </div>
+                        </div>
 
-                            <div class="w-full">
-                                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2 ml-1 text-center">DEVICE NAME</label>
-                                <input type="text" id="my-name-input" class="w-full bg-white/60 border border-slate-200 text-slate-700 text-sm font-bold rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 shadow-inner transition-all text-center" placeholder="デバイス名を入力">
+                        <div class="flex flex-col gap-6 w-full max-w-sm mt-4">
+                            <div class="w-full bg-white/60 border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col gap-5">
+                                <h3 class="text-xs font-extrabold text-slate-500 uppercase tracking-wider border-b border-slate-200/50 pb-2 flex items-center gap-1">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path></svg>
+                                    デザイン設定
+                                </h3>
+                                
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm font-bold text-slate-700">アイコン背景色</span>
+                                    <input type="color" id="bg-color-picker" class="w-8 h-8 rounded-lg cursor-pointer border-0 p-0 shadow-inner" value="#f8fafc">
+                                </div>
+                            </div>
+
+                            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center shrink-0">
+                                <div id="qrcode" class="p-2 bg-white rounded-xl"></div>
+                                <p class="text-[10px] font-bold text-slate-400 mt-3 text-center">相手のカメラでスキャンして<br>即座にグループ通話</p>
                             </div>
                         </div>
-
-                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center shrink-0">
-                            <div id="qrcode" class="p-2 bg-white rounded-xl"></div>
-                            <p class="text-[10px] font-bold text-slate-400 mt-3 text-center">相手のカメラでスキャンして<br>即座にグループ通話</p>
-                        </div>
-
                     </div>
                 </div>
 
-                <div id="tab-connect" class="flex-1 min-h-0 hidden flex-col p-4 sm:p-6 fade-in max-w-4xl mx-auto w-full">
+                <div id="tab-connect" class="flex-1 min-h-0 hidden flex-col p-4 sm:p-6 fade-in w-full mx-auto">
                     
                     <div id="connect-setup-view" class="flex flex-col h-full space-y-6 w-full max-w-2xl mx-auto">
                         <div class="p-5 bg-white/60 rounded-2xl border border-white shadow-sm transition-all duration-300 shrink-0">
@@ -187,68 +220,59 @@
                         </div>
                     </div>
 
-                    <div id="connect-active-view" class="hidden flex-col md:flex-row flex-1 min-h-0 bg-white/60 rounded-[2rem] border border-white shadow-xl overflow-hidden relative w-full">
+                    <div id="connect-active-view" class="hidden flex-col flex-1 min-h-0 bg-white/60 rounded-[2rem] border border-white shadow-xl overflow-hidden relative w-full">
                         
-                        <div class="flex-1 flex flex-col min-w-0 relative bg-slate-50/50">
-                            
-                            <div class="bg-white/80 backdrop-blur-md p-4 flex justify-between items-center border-b border-slate-200/50 z-10 shadow-sm shrink-0">
-                                <div class="flex items-center gap-3">
-                                    <div id="call-avatar" class="w-10 h-10 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-500 border border-indigo-100 shadow-inner ripple">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                                    </div>
-                                    <div class="overflow-hidden">
-                                        <p class="text-sm font-extrabold text-slate-700 truncate">グループ通話</p>
-                                        <p id="call-timer" class="text-[11px] text-emerald-500 font-bold flex items-center gap-1 font-mono">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> 00:00
-                                        </p>
-                                    </div>
+                        <div class="bg-white/80 backdrop-blur-md p-4 flex justify-between items-center border-b border-slate-200/50 z-10 shadow-sm shrink-0">
+                            <div class="flex items-center gap-3">
+                                <div id="call-avatar" class="w-10 h-10 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-500 border border-indigo-100 shadow-inner ripple">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                                 </div>
-                                <button id="disconnect-btn" class="px-4 py-2 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-xl text-xs font-bold transition-colors shrink-0 flex items-center gap-1 border border-red-100">
+                                <div class="overflow-hidden">
+                                    <p class="text-sm font-extrabold text-slate-700 truncate">グループ通話</p>
+                                    <p id="call-timer" class="text-[11px] text-emerald-500 font-bold flex items-center gap-1 font-mono">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> 00:00
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button id="invite-btn" class="px-4 py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-500 hover:text-white rounded-xl text-xs font-bold transition-colors shrink-0 flex items-center gap-1 border border-indigo-100 shadow-sm">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                                    招待
+                                </button>
+                                <button id="disconnect-btn" class="px-4 py-2 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-xl text-xs font-bold transition-colors shrink-0 flex items-center gap-1 border border-red-100 shadow-sm">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.516l2.257-1.13a1 1 0 00.502-1.21L9.22 3.683A1 1 0 008.27 3H5z"></path></svg>
                                     退出
                                 </button>
                             </div>
+                        </div>
 
-                            <div class="flex-1 overflow-y-auto p-4 flex flex-col">
-                                <div class="video-grid" id="video-grid-container">
-                                    <div class="video-container" id="container-local">
-                                        <video id="video-local" class="video-element" autoplay muted playsinline></video>
-                                        <img id="avatar-local" class="avatar-element hidden" src="">
-                                        <div class="name-badge" id="name-local">あなた</div>
-                                    </div>
+                        <div class="flex-1 overflow-y-auto p-4 flex flex-col bg-slate-50/50">
+                            <div class="video-grid" id="video-grid-container">
+                                <div class="video-container group" id="container-local">
+                                    <video id="video-local" class="video-element hidden" autoplay muted playsinline></video>
+                                    <img id="avatar-local" class="avatar-element" src="">
+                                    <div class="name-badge" id="name-local">あなた</div>
                                 </div>
-                            </div>
-
-                            <div class="bg-white/80 backdrop-blur-md p-4 border-t border-slate-200/50 flex justify-center gap-4 shrink-0 pb-safe">
-                                <button id="mute-btn" class="w-12 h-12 bg-slate-100 text-slate-600 rounded-full hover:bg-slate-200 transition-colors shadow-sm flex items-center justify-center border border-slate-200">
-                                    <svg id="icon-mic-on" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
-                                    <svg id="icon-mic-off" class="w-5 h-5 hidden text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14a3 3 0 003-3V5a3 3 0 00-3-3m-3 9v2m0 0v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5m-3 9a7 7 0 0014 0M3 3l18 18"></path></svg>
-                                </button>
-                                <button id="video-btn" class="w-12 h-12 bg-slate-100 text-slate-600 rounded-full hover:bg-slate-200 transition-colors shadow-sm flex items-center justify-center border border-slate-200">
-                                    <svg id="icon-vid-on" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                                    <svg id="icon-vid-off" class="w-5 h-5 hidden text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path><line x1="3" y1="3" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line></svg>
-                                </button>
                             </div>
                         </div>
 
-                        <div class="w-full md:w-80 bg-white/70 border-t md:border-t-0 md:border-l border-white shrink-0 flex flex-col min-h-[40%] md:min-h-0">
-                            <div class="p-4 border-b border-white shrink-0 bg-white/50 hidden md:block">
-                                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"></path></svg>
-                                    グループチャット
-                                </h3>
-                            </div>
-                            <div id="chat-messages" class="flex-1 p-4 overflow-y-auto flex flex-col gap-3 min-h-0"></div>
-                            <div class="p-3 bg-white/60 border-t border-white shrink-0">
-                                <div class="flex gap-2 w-full">
-                                    <input type="text" id="chat-input" placeholder="メッセージ..." class="flex-1 bg-white px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 border border-slate-100 transition-all min-w-0 shadow-inner">
-                                    <button id="chat-send-btn" class="px-4 py-2.5 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 transition-colors shadow-sm shrink-0">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
-                                    </button>
-                                </div>
-                            </div>
+                        <div class="bg-white/80 backdrop-blur-md p-4 border-t border-slate-200/50 flex justify-center items-center gap-4 shrink-0 pb-safe relative">
+                            <button id="mute-btn" class="w-12 h-12 bg-slate-100 text-slate-600 rounded-full hover:bg-slate-200 transition-colors shadow-sm flex items-center justify-center border border-slate-200">
+                                <svg id="icon-mic-on" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                                <svg id="icon-mic-off" class="w-5 h-5 hidden text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14a3 3 0 003-3V5a3 3 0 00-3-3m-3 9v2m0 0v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5m-3 9a7 7 0 0014 0M3 3l18 18"></path></svg>
+                            </button>
+                            
+                            <button id="audio-settings-btn" class="w-10 h-10 bg-white text-slate-500 rounded-full hover:bg-slate-50 transition-colors shadow-sm flex items-center justify-center border border-slate-200" title="マイク設定">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            </button>
+
+                            <button id="video-btn" class="w-12 h-12 bg-red-50 text-slate-600 rounded-full hover:bg-red-100 transition-colors shadow-sm flex items-center justify-center border border-red-200 ml-2">
+                                <svg id="icon-vid-on" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                <svg id="icon-vid-off" class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path><line x1="3" y1="3" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line></svg>
+                            </button>
                         </div>
                     </div>
+
                 </div>
 
                 <div id="tab-history" class="flex-1 min-h-0 hidden flex-col p-4 sm:p-6 fade-in max-w-4xl mx-auto w-full">
@@ -276,6 +300,39 @@
         </div>
     </div>
 
+    <div id="call-audio-settings-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex-col justify-end items-center z-50 p-4 pb-12 fade-in">
+        <div class="bg-white/95 backdrop-blur-xl rounded-[2rem] shadow-2xl p-6 w-full max-w-sm border border-white flex flex-col slide-up relative">
+            <div class="flex justify-between items-center mb-5 border-b border-slate-100 pb-3">
+                <h3 class="text-base font-extrabold text-slate-800 tracking-tight flex items-center gap-2">
+                    <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                    マイク詳細設定
+                </h3>
+                <button id="close-audio-settings-btn" class="text-slate-400 hover:text-slate-600 bg-slate-100 rounded-full p-1 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex flex-col">
+                    <span class="text-sm font-bold text-slate-700">超高音質(スタジオ)モード</span>
+                    <span class="text-[10px] text-slate-400 font-medium leading-tight mt-1">エコー/ノイズ除去無効・高サンプリング<br><b class="text-red-400">※変更は次回のマイクON時から有効</b></span>
+                </div>
+                <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                    <input type="checkbox" name="toggle" id="hq-toggle-modal" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer transition-colors duration-200 ease-in-out"/>
+                    <label for="hq-toggle-modal" class="toggle-label block overflow-hidden h-5 rounded-full bg-slate-300 cursor-pointer transition-colors duration-200 ease-in-out"></label>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <div class="flex justify-between items-center">
+                    <span class="text-sm font-bold text-slate-700">マイク入力ゲイン</span>
+                    <span class="text-xs text-indigo-600 font-mono font-bold bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100" id="gain-value-display-modal">1.0x</span>
+                </div>
+                <input type="range" id="mic-gain-slider-modal" min="0.1" max="5.0" step="0.1" value="1.0" class="w-full accent-indigo-500 bg-slate-200 rounded-lg appearance-none h-1.5 cursor-pointer mt-2">
+            </div>
+        </div>
+    </div>
+
     <div id="crop-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex-col items-center justify-center z-50 p-4 fade-in">
         <div class="bg-white/90 backdrop-blur-md rounded-[2rem] shadow-2xl p-6 w-full max-w-sm border border-white flex flex-col">
             <h3 class="text-lg font-extrabold mb-4 text-slate-800 tracking-tight text-center">アイコンを切り抜く</h3>
@@ -289,6 +346,26 @@
         </div>
     </div>
 
+    <div id="invite-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex-col items-center justify-center z-50 p-4 fade-in">
+        <div class="bg-white/95 backdrop-blur-xl rounded-[2rem] shadow-2xl p-8 max-w-sm w-full border border-white">
+            <h3 class="text-lg font-extrabold mb-2 text-slate-800 tracking-tight">ユーザーを招待</h3>
+            <p class="text-sm text-slate-500 mb-4 font-medium leading-relaxed">招待する相手のIDを入力するか、履歴から選んでクレメンス</p>
+            
+            <input type="text" id="invite-id-input" placeholder="ID (6桁)" class="w-full px-4 py-3 mb-4 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-mono font-bold uppercase shadow-inner transition-all text-center" maxlength="6">
+            
+            <div class="mb-6">
+                <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">過去の接続先</h4>
+                <div id="invite-history-list" class="max-h-36 overflow-y-auto space-y-1 bg-slate-50 p-2 rounded-xl border border-slate-100 shadow-inner">
+                    </div>
+            </div>
+
+            <div class="flex gap-3 mt-4">
+                <button id="invite-cancel-btn" class="flex-1 px-4 py-3 bg-slate-100 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-200 transition-all">キャンセル</button>
+                <button id="invite-ok-btn" class="flex-1 px-4 py-3 bg-indigo-500 text-white rounded-xl text-sm font-bold hover:bg-indigo-600 transition-all shadow-lg shadow-indigo-200">発信</button>
+            </div>
+        </div>
+    </div>
+
     <div id="auth-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex-col items-center justify-center z-50 p-4 fade-in">
         <div class="bg-white/90 backdrop-blur-md rounded-[2rem] shadow-2xl p-8 max-w-sm w-full border border-white">
             <div class="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center mb-4 border border-indigo-100 shadow-inner ripple">
@@ -296,7 +373,7 @@
             </div>
             <h3 class="text-xl font-extrabold mb-2 text-slate-800 tracking-tight">着信中...</h3>
             <p class="text-sm text-slate-500 mb-8 font-medium leading-relaxed">
-                <span id="auth-peer-name" class="font-black text-indigo-600 text-base px-1">---</span> <br>から音声/ビデオ通話の着信です。応答しますか？
+                <span id="auth-peer-name" class="font-black text-indigo-600 text-base px-1">---</span> <br>からグループ通話の着信です。応答しますか？
             </p>
             <div class="flex gap-3">
                 <button id="auth-reject-btn" class="flex-1 px-4 py-3 bg-red-50 text-red-600 rounded-xl text-sm font-bold hover:bg-red-100 transition-all border border-red-100">拒否</button>
@@ -324,29 +401,39 @@
         // --- 設定と初期化 ---
         let peer;
         
-        // 複数人通話対応のMapに変更
         const activeConnections = new Map();
         const activeCalls = new Map();
-        const peerInfos = new Map(); // id -> {name, avatar, video, audio}
+        const peerInfos = new Map(); 
+        const audioMonitors = new Map(); // 発話検知用
         
         let pendingConnection = null;
-        let localStream = null;
+        let rawLocalStream = null; 
+        let localStream = null;    
+        
+        let audioCtx = null;
+        let gainNode = null;
+        let audioDestination = null;
+
         let callTimerInterval = null;
         let callSeconds = 0;
+        let isCallActive = false; 
         
         let isMuted = false;
-        let isVideoOff = false;
+        let isVideoOff = true; 
         
         const myId = getOrCreateId();
         let myName = localStorage.getItem('voice_myPeerName') || '名無しデバイス';
         let myAvatarData = localStorage.getItem('voice_myAvatar') || ''; 
+        let myAvatarBg = localStorage.getItem('voice_myAvatarBg') || '#f8fafc';
+        let micGain = parseFloat(localStorage.getItem('voice_micGain') || '1.0');
+        let isHighQuality = localStorage.getItem('voice_isHQ') === 'true';
+
         let knownPeers = JSON.parse(localStorage.getItem('voice_knownPeers') || '{}');
         let historyData = JSON.parse(localStorage.getItem('voice_callHistory') || '[]');
         
         let html5QrCode = null;
         let cropper = null;
 
-        // DOM要素の取得
         const ui = {
             idDisplay: document.getElementById('my-id-display'),
             statusIndicator: document.getElementById('status-indicator'),
@@ -363,6 +450,7 @@
             avatarPreview: document.getElementById('my-avatar-preview'),
             cropModal: document.getElementById('crop-modal'),
             cropImage: document.getElementById('crop-image'),
+            bgColorPicker: document.getElementById('bg-color-picker'),
             
             setupView: document.getElementById('connect-setup-view'),
             activeView: document.getElementById('connect-active-view'),
@@ -371,20 +459,26 @@
             videoLocal: document.getElementById('video-local'),
             avatarLocal: document.getElementById('avatar-local'),
             nameLocal: document.getElementById('name-local'),
+            containerLocal: document.getElementById('container-local'),
             
             callTimer: document.getElementById('call-timer'),
             callAvatar: document.getElementById('call-avatar'),
             disconnectBtn: document.getElementById('disconnect-btn'),
-            chatMessages: document.getElementById('chat-messages'),
-            chatInput: document.getElementById('chat-input'),
-            chatSendBtn: document.getElementById('chat-send-btn'),
             
             muteBtn: document.getElementById('mute-btn'),
             videoBtn: document.getElementById('video-btn'),
+            audioSettingsBtn: document.getElementById('audio-settings-btn'),
             iconMicOn: document.getElementById('icon-mic-on'),
             iconMicOff: document.getElementById('icon-mic-off'),
             iconVidOn: document.getElementById('icon-vid-on'),
             iconVidOff: document.getElementById('icon-vid-off'),
+
+            // マイク設定モーダル関連
+            audioModal: document.getElementById('call-audio-settings-modal'),
+            closeAudioBtn: document.getElementById('close-audio-settings-btn'),
+            micGainSliderModal: document.getElementById('mic-gain-slider-modal'),
+            gainValueDisplayModal: document.getElementById('gain-value-display-modal'),
+            hqToggleModal: document.getElementById('hq-toggle-modal'),
 
             authModal: document.getElementById('auth-modal'),
             authPeerName: document.getElementById('auth-peer-name'),
@@ -397,7 +491,14 @@
             confirmOkBtn: document.getElementById('confirm-ok-btn'),
             confirmCancelBtn: document.getElementById('confirm-cancel-btn'),
             toastContainer: document.getElementById('toast-container'),
-            mainTabs: document.getElementById('main-tabs')
+            mainTabs: document.getElementById('main-tabs'),
+            
+            inviteBtn: document.getElementById('invite-btn'),
+            inviteModal: document.getElementById('invite-modal'),
+            inviteInput: document.getElementById('invite-id-input'),
+            inviteOkBtn: document.getElementById('invite-ok-btn'),
+            inviteCancelBtn: document.getElementById('invite-cancel-btn'),
+            inviteHistoryList: document.getElementById('invite-history-list'),
         };
 
         initApp();
@@ -406,6 +507,17 @@
             ui.idDisplay.textContent = myId;
             ui.nameInput.value = myName;
             ui.nameLocal.textContent = myName;
+            
+            // アイコン背景色の復元 (透過PNGの背面に色を置くため)
+            ui.bgColorPicker.value = myAvatarBg;
+            ui.avatarPreview.style.backgroundColor = myAvatarBg;
+            ui.avatarLocal.style.backgroundColor = myAvatarBg;
+            
+            // マイク設定の復元（モーダル内の要素へ）
+            ui.micGainSliderModal.value = micGain;
+            ui.gainValueDisplayModal.textContent = micGain.toFixed(1) + 'x';
+            ui.hqToggleModal.checked = isHighQuality;
+
             if(myAvatarData) {
                 ui.avatarPreview.src = myAvatarData;
                 ui.avatarLocal.src = myAvatarData;
@@ -416,6 +528,43 @@
                 localStorage.setItem('voice_myPeerName', myName);
                 ui.nameLocal.textContent = myName;
                 broadcastMetadata();
+            });
+
+            // 背景色リスナー
+            ui.bgColorPicker.addEventListener('input', (e) => {
+                myAvatarBg = e.target.value;
+                localStorage.setItem('voice_myAvatarBg', myAvatarBg);
+                ui.avatarPreview.style.backgroundColor = myAvatarBg;
+                ui.avatarLocal.style.backgroundColor = myAvatarBg;
+                broadcastMetadata();
+            });
+
+            // モーダル内のマイク設定リスナー
+            ui.micGainSliderModal.addEventListener('input', (e) => {
+                micGain = parseFloat(e.target.value);
+                ui.gainValueDisplayModal.textContent = micGain.toFixed(1) + 'x';
+                localStorage.setItem('voice_micGain', micGain);
+                if(gainNode) {
+                    gainNode.gain.value = micGain;
+                }
+            });
+
+            ui.hqToggleModal.addEventListener('change', async (e) => {
+                isHighQuality = e.target.checked;
+                localStorage.setItem('voice_isHQ', isHighQuality);
+                if(rawLocalStream) {
+                    showToast('高音質設定は次回のマイクON時から有効になるで！');
+                }
+            });
+
+            // オーディオ設定モーダル開閉
+            ui.audioSettingsBtn.addEventListener('click', () => {
+                ui.audioModal.classList.remove('hidden');
+                ui.audioModal.classList.add('flex');
+            });
+            ui.closeAudioBtn.addEventListener('click', () => {
+                ui.audioModal.classList.add('hidden');
+                ui.audioModal.classList.remove('flex');
             });
 
             renderHistory();
@@ -429,44 +578,52 @@
                 checkUrlForAutoConnect();
             });
 
-            // データ接続受信
-            peer.on('connection', (conn) => {
-                setupConnection(conn, false);
-            });
-
-            // メディア接続受信
+            peer.on('connection', (conn) => setupConnection(conn, false));
             peer.on('call', (call) => {
                 if(localStream) {
-                    call.answer(localStream);
+                    call.answer(localStream); 
                     handleCallStream(call);
                 }
             });
-
             peer.on('error', (err) => {
                 console.error(err);
                 if(err.type === 'peer-unavailable') {
-                    ui.connStatus.textContent = '指定されたIDが見つかりません';
-                    ui.connStatus.className = "text-xs mt-2 text-red-500 font-bold h-4";
+                    showToast('指定されたIDが見つからんンゴ', 'error');
                 } else {
                     setStatus('エラー', 'text-red-600 bg-red-100/50 border-red-200/50', false);
                 }
             });
 
-            // イベントリスナー
             ui.connectBtn.addEventListener('click', () => connectToPeer(ui.targetInput.value));
             ui.clearHistoryBtn.addEventListener('click', () => {
                 customConfirm('確認', '通話履歴をすべて削除しますか？\n(最近のデバイスもリセットされます)', clearHistory);
             });
             ui.disconnectBtn.addEventListener('click', disconnectAll);
-            ui.chatSendBtn.addEventListener('click', sendChatMessage);
-            ui.chatInput.addEventListener('keypress', (e) => {
-                if(e.key === 'Enter') sendChatMessage();
-            });
             ui.authAcceptBtn.addEventListener('click', acceptConnection);
             ui.authRejectBtn.addEventListener('click', rejectConnection);
             ui.muteBtn.addEventListener('click', toggleMute);
             ui.videoBtn.addEventListener('click', toggleVideo);
             document.getElementById('scan-qr-btn').addEventListener('click', toggleScanner);
+            
+            // 招待モーダル関連
+            ui.inviteBtn.addEventListener('click', () => {
+                ui.inviteModal.classList.remove('hidden');
+                ui.inviteModal.classList.add('flex');
+                renderInviteHistory(); // 履歴リスト描画
+            });
+            ui.inviteCancelBtn.addEventListener('click', () => {
+                ui.inviteModal.classList.add('hidden');
+                ui.inviteModal.classList.remove('flex');
+            });
+            ui.inviteOkBtn.addEventListener('click', () => {
+                const target = ui.inviteInput.value;
+                if(target) connectToPeer(target);
+                ui.inviteModal.classList.add('hidden');
+                ui.inviteModal.classList.remove('flex');
+                ui.inviteInput.value = '';
+            });
+            
+            document.body.addEventListener('click', initAudioContextOnFirstClick, { once: true });
         }
 
         // --- カスタムUI ---
@@ -524,7 +681,6 @@
                 : (text === 'オンライン' 
                     ? `<span class="relative flex h-2.5 w-2.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span></span>`
                     : `<span class="h-2.5 w-2.5 rounded-full bg-current"></span>`);
-            
             ui.statusIndicator.innerHTML = `${iconHtml} <span class="ml-1">${text}</span>`;
             ui.statusIndicator.className = `flex items-center px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-sm border transition-all ${containerClasses}`;
         }
@@ -557,45 +713,150 @@
         function saveCroppedImage() {
             if (!cropper) return;
             const canvas = cropper.getCroppedCanvas({ width: 256, height: 256 });
-            myAvatarData = canvas.toDataURL('image/jpeg', 0.8);
+            myAvatarData = canvas.toDataURL('image/png');
             localStorage.setItem('voice_myAvatar', myAvatarData);
             ui.avatarPreview.src = myAvatarData;
             ui.avatarLocal.src = myAvatarData;
-            
             broadcastMetadata();
             closeCropper();
         }
 
         // --- マイク・カメラ取得 ---
-        async function getMedia() {
-            if (localStream) return true;
+        function initAudioContextOnFirstClick() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            } else if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        async function getMedia(requestVideo = false) {
+            if (rawLocalStream && !requestVideo) return true;
+            if (rawLocalStream && requestVideo && rawLocalStream.getVideoTracks().length > 0) return true;
+
             try {
-                // ビデオも取得するように変更
-                localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-                ui.videoLocal.srcObject = localStream;
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+                const audioConstraints = isHighQuality ? {
+                    sampleRate: { ideal: 96000 },
+                    channelCount: { ideal: 2 },
+                    echoCancellation: false,
+                    noiseSuppression: false,
+                    autoGainControl: false,
+                } : true;
+
+                if (!rawLocalStream) {
+                    rawLocalStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints, video: false });
+                    
+                    const audioSource = audioCtx.createMediaStreamSource(rawLocalStream);
+                    gainNode = audioCtx.createGain();
+                    gainNode.gain.value = micGain;
+                    audioDestination = audioCtx.createMediaStreamDestination();
+                    
+                    audioSource.connect(gainNode);
+                    gainNode.connect(audioDestination);
+
+                    localStream = new MediaStream();
+                    localStream.addTrack(audioDestination.stream.getAudioTracks()[0]);
+
+                    ui.videoLocal.srcObject = rawLocalStream; 
+                    
+                    // 自分の発話検知開始（元のマイクストリームで検知）
+                    startVolumeMonitor(rawLocalStream, 'container-local');
+                }
+                
+                if (requestVideo && rawLocalStream.getVideoTracks().length === 0) {
+                    const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    const videoTrack = videoStream.getVideoTracks()[0];
+                    rawLocalStream.addTrack(videoTrack);
+                    localStream.addTrack(videoTrack);
+                    ui.videoLocal.srcObject = rawLocalStream; 
+                    
+                    activeCalls.forEach(call => {
+                        const pc = call.peerConnection;
+                        if(pc) {
+                            const videoSender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+                            if (videoSender) {
+                                videoSender.replaceTrack(videoTrack);
+                            } else {
+                                pc.addTrack(videoTrack, localStream);
+                            }
+                        }
+                    });
+                }
+                
                 updateLocalMediaUI();
                 return true;
             } catch (err) {
                 console.error(err);
-                try {
-                    // ビデオがない場合は音声のみフォールバック
-                    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                    isVideoOff = true;
-                    updateLocalMediaUI();
-                    return true;
-                } catch(e) {
-                    showToast('マイク/カメラのアクセスが許可されていません', 'error');
-                    ui.connStatus.textContent = 'メディア取得エラー';
-                    ui.connStatus.className = "text-xs mt-2 text-red-500 font-bold h-4";
-                    return false;
+                showToast('マイク/カメラのアクセスが許可されていませんンゴ', 'error');
+                return false;
+            }
+        }
+
+        // --- 発話検知（エフェクト） ---
+        function startVolumeMonitor(stream, containerId) {
+            if (!audioCtx) return;
+            try {
+                const source = audioCtx.createMediaStreamSource(stream);
+                const analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 256;
+                analyser.smoothingTimeConstant = 0.5;
+                // 出力には繋がず解析だけ行う（ハウリング防止）
+                source.connect(analyser);
+                
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                let isMonitoring = true;
+                const el = document.getElementById(containerId);
+
+                function checkVolume() {
+                    if(!isMonitoring) return;
+                    if(!el || !stream.active) {
+                        if(el) el.classList.remove('speaking-ring');
+                        return requestAnimationFrame(checkVolume);
+                    }
+                    
+                    // 自分自身のミュート状態を考慮
+                    if(containerId === 'container-local' && isMuted) {
+                        el.classList.remove('speaking-ring');
+                        return requestAnimationFrame(checkVolume);
+                    }
+                    
+                    analyser.getByteFrequencyData(dataArray);
+                    let sum = 0;
+                    for(let i=0; i<dataArray.length; i++) sum += dataArray[i];
+                    let average = sum / dataArray.length;
+                    
+                    // 閾値を超えたら緑枠をつける
+                    if(average > 10) { 
+                        el.classList.add('speaking-ring');
+                    } else {
+                        el.classList.remove('speaking-ring');
+                    }
+                    
+                    requestAnimationFrame(checkVolume);
                 }
+                
+                checkVolume();
+                audioMonitors.set(containerId, { stop: () => { isMonitoring = false; } });
+                
+            } catch (e) {
+                console.error("Volume Monitor Error:", e);
+            }
+        }
+
+        function stopVolumeMonitor(containerId) {
+            if(audioMonitors.has(containerId)) {
+                audioMonitors.get(containerId).stop();
+                audioMonitors.delete(containerId);
             }
         }
 
         function toggleMute() {
-            if(!localStream) return;
+            if(!rawLocalStream) return;
             isMuted = !isMuted;
-            localStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
+            rawLocalStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
             
             if(isMuted) {
                 ui.iconMicOn.classList.add('hidden');
@@ -610,13 +871,20 @@
             }
         }
 
-        function toggleVideo() {
-            if(!localStream) return;
-            isVideoOff = !isVideoOff;
+        async function toggleVideo() {
+            if(!rawLocalStream) return;
             
-            const vTracks = localStream.getVideoTracks();
-            if(vTracks.length > 0) {
-                vTracks.forEach(t => t.enabled = !isVideoOff);
+            if (isVideoOff) {
+                const hasVideoTrack = rawLocalStream.getVideoTracks().length > 0;
+                if (!hasVideoTrack) {
+                    const success = await getMedia(true); 
+                    if (!success) return;
+                }
+                rawLocalStream.getVideoTracks().forEach(t => t.enabled = true);
+                isVideoOff = false;
+            } else {
+                rawLocalStream.getVideoTracks().forEach(t => t.enabled = false);
+                isVideoOff = true;
             }
 
             if(isVideoOff) {
@@ -635,17 +903,18 @@
         }
 
         function updateLocalMediaUI() {
-            if (isVideoOff || localStream.getVideoTracks().length === 0) {
+            if (isVideoOff || !rawLocalStream || rawLocalStream.getVideoTracks().length === 0) {
                 ui.videoLocal.classList.add('hidden');
                 ui.avatarLocal.classList.remove('hidden');
                 ui.avatarLocal.src = myAvatarData || ui.avatarPreview.src;
+                ui.avatarLocal.style.backgroundColor = myAvatarBg;
             } else {
                 ui.videoLocal.classList.remove('hidden');
                 ui.avatarLocal.classList.add('hidden');
             }
         }
 
-        // --- 接続・通信ロジック (複数人) ---
+        // --- 接続・通信ロジック ---
         function getOrCreateId() {
             let id = localStorage.getItem('voice_myPeerId');
             if (!id) {
@@ -680,10 +949,11 @@
             targetId = targetId.trim().toUpperCase();
             if (!targetId || targetId === myId || activeConnections.has(targetId)) return;
 
-            ui.connStatus.textContent = 'メディア準備中...';
+            ui.connStatus.textContent = 'マイク準備中...';
             ui.connStatus.className = "text-xs mt-2 text-indigo-500 font-bold h-4";
 
-            const hasMedia = await getMedia();
+            initAudioContextOnFirstClick(); 
+            const hasMedia = await getMedia(false);
             if(!hasMedia) return;
 
             ui.connStatus.textContent = '呼び出し中...';
@@ -702,7 +972,6 @@
 
             conn.on('data', (data) => {
                 if (data.type === 'req-connect') {
-                    // もしすでに通話中なら自動応答、そうでなければ確認モーダル
                     if (activeConnections.size > 0) {
                         autoAcceptConnection(conn, data.name);
                     } else {
@@ -722,8 +991,8 @@
                         handleCallStream(call);
 
                         toggleConnectionView(true);
-                        conn.send({ type: 'metadata', name: myName, avatar: myAvatarData, video: !isVideoOff });
-                        broadcastPeerList(); // メッシュネットワーク展開
+                        conn.send({ type: 'metadata', name: myName, avatar: myAvatarData, bg: myAvatarBg, video: !isVideoOff });
+                        broadcastPeerList(); 
                         ui.connStatus.textContent = '';
                     } else {
                         ui.connStatus.textContent = '相手に通話を拒否されました';
@@ -732,16 +1001,11 @@
                     }
                 }
                 else if (data.type === 'metadata') {
-                    peerInfos.set(conn.peer, { name: data.name, avatar: data.avatar, video: data.video });
+                    peerInfos.set(conn.peer, { name: data.name, avatar: data.avatar, bg: data.bg, video: data.video });
                     updateKnownPeers(conn.peer, data.name);
                     updateGridUI(conn.peer);
                 } 
-                else if (data.type === 'chat') {
-                    const sender = peerInfos.get(conn.peer)?.name || conn.peer;
-                    appendChatMessage(data.text, sender, 'other');
-                }
                 else if (data.type === 'peer-list') {
-                    // 自動メッシュ構築
                     data.peers.forEach(p => {
                         if (p !== myId && !activeConnections.has(p)) {
                             connectToPeer(p);
@@ -760,20 +1024,22 @@
         }
 
         async function autoAcceptConnection(conn, peerName) {
-            const hasMedia = await getMedia();
+            initAudioContextOnFirstClick();
+            const hasMedia = await getMedia(false);
             if(!hasMedia) { conn.close(); return; }
             
             conn.send({ type: 'res-connect', status: 'accepted', name: myName });
             activeConnections.set(conn.peer, conn);
             updateKnownPeers(conn.peer, peerName);
             
-            conn.send({ type: 'metadata', name: myName, avatar: myAvatarData, video: !isVideoOff });
+            conn.send({ type: 'metadata', name: myName, avatar: myAvatarData, bg: myAvatarBg, video: !isVideoOff });
             broadcastPeerList();
         }
 
         async function acceptConnection() {
             if (pendingConnection) {
-                const hasMedia = await getMedia();
+                initAudioContextOnFirstClick();
+                const hasMedia = await getMedia(false);
                 if(!hasMedia) { rejectConnection(); return; }
 
                 pendingConnection.send({ type: 'res-connect', status: 'accepted', name: myName });
@@ -781,9 +1047,10 @@
                 
                 const pName = ui.authPeerName.textContent;
                 updateKnownPeers(pendingConnection.peer, pName);
+                
                 toggleConnectionView(true);
                 
-                pendingConnection.send({ type: 'metadata', name: myName, avatar: myAvatarData, video: !isVideoOff });
+                pendingConnection.send({ type: 'metadata', name: myName, avatar: myAvatarData, bg: myAvatarBg, video: !isVideoOff });
                 closeAuthModal();
             }
         }
@@ -820,11 +1087,12 @@
             activeCalls.delete(peerId);
             peerInfos.delete(peerId);
             removeVideoStream(peerId);
+            stopVolumeMonitor(`container-${peerId}`);
             
             if(activeConnections.size === 0) {
                 disconnectAll();
             } else {
-                showToast(`${knownPeers[peerId] || peerId} が退出しました`);
+                showToast(`${knownPeers[peerId] || peerId} が退出したンゴ`);
             }
         }
 
@@ -836,7 +1104,10 @@
             peerInfos.clear();
             
             document.querySelectorAll('.video-container').forEach(c => {
-                if(c.id !== 'container-local') c.remove();
+                if(c.id !== 'container-local') {
+                    stopVolumeMonitor(c.id);
+                    c.remove();
+                }
             });
             
             toggleConnectionView(false);
@@ -845,7 +1116,7 @@
         }
 
         function broadcastMetadata() {
-            const data = { type: 'metadata', name: myName, avatar: myAvatarData, video: !isVideoOff };
+            const data = { type: 'metadata', name: myName, avatar: myAvatarData, bg: myAvatarBg, video: !isVideoOff };
             activeConnections.forEach(conn => {
                 if(conn.open) conn.send(data);
             });
@@ -862,21 +1133,29 @@
 
         // --- ビデオグリッド UI ---
         function addVideoStream(peerId, stream) {
-            if (document.getElementById(`container-${peerId}`)) return;
+            const cId = `container-${peerId}`;
+            if (document.getElementById(cId)) return;
             
             const container = document.createElement('div');
-            container.id = `container-${peerId}`;
-            container.className = 'video-container fade-in';
+            container.id = cId;
+            container.className = 'video-container fade-in group';
             container.innerHTML = `
                 <video id="video-${peerId}" class="video-element" autoplay playsinline></video>
                 <img id="avatar-${peerId}" class="avatar-element hidden" src="">
                 <div class="name-badge" id="name-${peerId}">${peerId}</div>
+                
+                <div class="absolute top-3 right-3 bg-slate-900/60 backdrop-blur-md px-3 py-1.5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-2 z-20">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
+                    <input type="range" class="w-20 h-1 accent-indigo-400 bg-slate-600 rounded-lg appearance-none cursor-pointer" min="0" max="1" step="0.05" value="1" oninput="document.getElementById('video-${peerId}').volume = this.value; document.getElementById('video-${peerId}').muted = (this.value === '0');">
+                </div>
             `;
             ui.videoGrid.appendChild(container);
             document.getElementById(`video-${peerId}`).srcObject = stream;
             
-            // 初期のメタデータ適用
             updateGridUI(peerId);
+            
+            // 相手の発話検知開始
+            startVolumeMonitor(stream, cId);
         }
 
         function removeVideoStream(peerId) {
@@ -901,30 +1180,41 @@
                     vidEl.classList.add('hidden');
                     avEl.classList.remove('hidden');
                     avEl.src = info.avatar || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
+                    if(info.bg) avEl.style.backgroundColor = info.bg;
                 }
             }
         }
 
         function toggleConnectionView(isConnected) {
-            if (isConnected && activeConnections.size === 1) { // 最初の接続時のみ
+            if (isConnected && !isCallActive) {
+                isCallActive = true;
+                
+                switchTab('connect');
                 ui.setupView.classList.add('hidden');
                 ui.mainTabs.classList.add('hidden');
                 ui.activeView.classList.remove('hidden');
                 ui.activeView.classList.add('flex');
                 
-                ui.chatMessages.innerHTML = '';
-                const defaultMsg = document.createElement('p');
-                defaultMsg.className = "text-[10px] uppercase tracking-widest text-center text-slate-400 py-4 font-bold";
-                defaultMsg.textContent = "セキュアなP2Pグループ通話が確立されました";
-                ui.chatMessages.appendChild(defaultMsg);
-                
                 startCallTimer();
+                
+                if (window.innerWidth >= 1024) {
+                    if (!document.fullscreenElement) {
+                        document.documentElement.requestFullscreen().catch(err => {
+                            console.log(`全画面化エラーンゴ: ${err.message}`);
+                        });
+                    }
+                }
             } else if (!isConnected) {
+                isCallActive = false;
                 stopCallTimer();
                 ui.setupView.classList.remove('hidden');
                 ui.mainTabs.classList.remove('hidden');
                 ui.activeView.classList.add('hidden');
                 ui.activeView.classList.remove('flex');
+                
+                if (document.fullscreenElement) {
+                    document.exitFullscreen().catch(err => console.log(err));
+                }
             }
         }
 
@@ -952,30 +1242,7 @@
             return `${m}:${s}`;
         }
 
-        // --- チャット・履歴・その他 ---
-        function sendChatMessage() {
-            const text = ui.chatInput.value.trim();
-            if (!text || activeConnections.size === 0) return;
-
-            activeConnections.forEach(conn => {
-                if(conn.open) conn.send({ type: 'chat', text: text });
-            });
-            appendChatMessage(text, 'あなた', 'me');
-            ui.chatInput.value = '';
-        }
-
-        function appendChatMessage(text, sender, type) {
-            const div = document.createElement('div');
-            const isMe = type === 'me';
-            div.className = "fade-in flex flex-col " + (isMe ? "items-end" : "items-start");
-            div.innerHTML = `
-                <span class="text-[10px] text-slate-400 mb-1 mx-1 font-bold">${sender}</span>
-                <div class="${isMe ? 'chat-bubble-me' : 'chat-bubble-other'} p-3 px-4 text-sm font-medium break-words max-w-[90%] shadow-sm">${text}</div>
-            `;
-            ui.chatMessages.appendChild(div);
-            ui.chatMessages.scrollTop = ui.chatMessages.scrollHeight;
-        }
-
+        // --- 履歴・その他 ---
         function updateKnownPeers(id, name) {
             knownPeers[id] = name;
             localStorage.setItem('voice_knownPeers', JSON.stringify(knownPeers));
@@ -1010,6 +1277,39 @@
                 });
                 ui.nearbyList.appendChild(li);
             });
+        }
+
+        // 招待用履歴リスト
+        function renderInviteHistory() {
+            ui.inviteHistoryList.innerHTML = '';
+            const peers = Object.keys(knownPeers);
+            let addedCount = 0;
+            
+            peers.forEach(id => {
+                if(id === myId || activeConnections.has(id)) return;
+                
+                const div = document.createElement('div');
+                div.className = "flex justify-between items-center p-2 hover:bg-white rounded-lg cursor-pointer border border-transparent hover:border-slate-200 transition-all";
+                div.innerHTML = `
+                    <div class="overflow-hidden">
+                        <p class="text-[13px] font-bold text-slate-700 truncate">${knownPeers[id]}</p>
+                        <p class="text-[9px] text-slate-400 font-mono tracking-wider">${id}</p>
+                    </div>
+                    <button class="text-[10px] bg-indigo-50 border border-indigo-100 text-indigo-600 px-2.5 py-1.5 rounded-lg font-bold hover:bg-indigo-100 transition-colors">選択</button>
+                `;
+                div.addEventListener('click', () => {
+                    ui.inviteInput.value = id;
+                    // 一度視覚的にフィードバックを入れる
+                    ui.inviteInput.classList.add('ring-2', 'ring-indigo-400');
+                    setTimeout(() => ui.inviteInput.classList.remove('ring-2', 'ring-indigo-400'), 200);
+                });
+                ui.inviteHistoryList.appendChild(div);
+                addedCount++;
+            });
+            
+            if (addedCount === 0) {
+                ui.inviteHistoryList.innerHTML = '<p class="text-[11px] text-slate-400 text-center py-4 font-bold">招待できる履歴がありません</p>';
+            }
         }
 
         function saveHistory(type, duration, peerId) {
