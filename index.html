@@ -141,7 +141,7 @@
             <div class="w-full lg:w-[96%] xl:w-[98%] h-full relative flex flex-col min-h-0">
                 
                 <div id="tab-device" class="flex-1 min-h-0 flex flex-col p-4 sm:p-6 fade-in overflow-y-auto">
-                    <div class="flex-1 flex flex-col md:flex-row items-start justify-center gap-8 md:gap-12">
+                    <div class="flex-1 flex flex-col md:flex-row items-center md:items-start justify-center gap-8 md:gap-12">
                         
                         <div class="flex flex-col items-center gap-6 w-full max-w-sm mt-4">
                             <div class="relative group cursor-pointer" onclick="document.getElementById('avatar-upload').click()">
@@ -579,11 +579,14 @@
             });
 
             peer.on('connection', (conn) => setupConnection(conn, false));
-            peer.on('call', (call) => {
-                if(localStream) {
-                    call.answer(localStream); 
-                    handleCallStream(call);
+            peer.on('call', async (call) => {
+                // localStreamがまだない場合はマイクだけ取得してから応答
+                if (!localStream) {
+                    initAudioContextOnFirstClick();
+                    await getMedia(false);
                 }
+                call.answer(localStream || new MediaStream());
+                handleCallStream(call);
             });
             peer.on('error', (err) => {
                 console.error(err);
@@ -1134,27 +1137,46 @@
         // --- ビデオグリッド UI ---
         function addVideoStream(peerId, stream) {
             const cId = `container-${peerId}`;
-            if (document.getElementById(cId)) return;
-            
+            let videoEl = document.getElementById(`video-${peerId}`);
+
+            // すでにコンテナがあればstreamだけ更新
+            if (videoEl) {
+                videoEl.srcObject = stream;
+                videoEl.play().catch(e => console.warn('video play error:', e));
+                return;
+            }
+
             const container = document.createElement('div');
             container.id = cId;
             container.className = 'video-container fade-in group';
             container.innerHTML = `
-                <video id="video-${peerId}" class="video-element" autoplay playsinline></video>
+                <video id="video-${peerId}" class="video-element" autoplay playsinline muted></video>
                 <img id="avatar-${peerId}" class="avatar-element hidden" src="">
                 <div class="name-badge" id="name-${peerId}">${peerId}</div>
-                
                 <div class="absolute top-3 right-3 bg-slate-900/60 backdrop-blur-md px-3 py-1.5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-2 z-20">
                     <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
-                    <input type="range" class="w-20 h-1 accent-indigo-400 bg-slate-600 rounded-lg appearance-none cursor-pointer" min="0" max="1" step="0.05" value="1" oninput="document.getElementById('video-${peerId}').volume = this.value; document.getElementById('video-${peerId}').muted = (this.value === '0');">
+                    <input type="range" class="w-20 h-1 accent-indigo-400 bg-slate-600 rounded-lg appearance-none cursor-pointer" min="0" max="1" step="0.05" value="1" oninput="var v=document.getElementById('video-${peerId}'); v.muted=false; v.volume=this.value; if(this.value==='0') v.muted=true;">
                 </div>
             `;
             ui.videoGrid.appendChild(container);
-            document.getElementById(`video-${peerId}`).srcObject = stream;
-            
+
+            videoEl = document.getElementById(`video-${peerId}`);
+            videoEl.srcObject = stream;
+            // muted=trueで再生開始後にmuted解除（ブラウザautoplay制限回避）
+            videoEl.play().then(() => {
+                videoEl.muted = false;
+            }).catch(e => {
+                console.warn('autoplay blocked, retry on interaction:', e);
+                const retry = () => {
+                    videoEl.play().then(() => { videoEl.muted = false; }).catch(() => {});
+                    document.removeEventListener('click', retry);
+                    document.removeEventListener('touchstart', retry);
+                };
+                document.addEventListener('click', retry, { once: true });
+                document.addEventListener('touchstart', retry, { once: true });
+            });
+
             updateGridUI(peerId);
-            
-            // 相手の発話検知開始
             startVolumeMonitor(stream, cId);
         }
 
